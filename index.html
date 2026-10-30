@@ -686,6 +686,23 @@ td.r,th.r{text-align:right}
 .ph .meta{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
 .ph .row .btn{padding:3px 7px;font-size:11.5px}
 .links.phl{gap:5px}.links.phl a{font-size:11.5px;padding:3px 7px}.links.phl .btn{font-size:11.5px;padding:3px 7px}
+.gps{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;padding:8px 10px;background:var(--sunk);font-size:13px}
+.gps .dot{width:11px;height:11px;border-radius:50%;background:var(--muted);flex:none}
+.gps.ok .dot{background:var(--ok)}.gps.warn .dot{background:var(--warn)}.gps.bad .dot{background:var(--bad)}
+.gps.ok .dot,.gps.warn .dot{box-shadow:0 0 0 0 currentColor;animation:pulse 2s infinite}
+@keyframes pulse{0%{opacity:1}50%{opacity:.45}100%{opacity:1}}
+.gps span:nth-child(2){flex:1;min-width:0}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg button{font:inherit;text-align:left;display:flex;flex-direction:column;gap:2px;padding:9px 10px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);cursor:pointer}
+.seg button span{font-size:11.5px;color:var(--muted)}
+.seg button[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.seg button[aria-checked="true"] b{color:var(--accent)}
+.cam{display:flex;align-items:center;justify-content:center;gap:12px;min-height:84px;border-radius:8px;background:var(--accent);color:#fff;font-family:var(--f-display);font-size:24px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;cursor:pointer;user-select:none}
+.cam:active{transform:translateY(1px)}
+.cam:focus-within,.cam:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.cam-ic{width:34px;height:26px;border:3px solid #fff;border-radius:6px;position:relative}
+.cam-ic::after{content:"";position:absolute;width:11px;height:11px;border:3px solid #fff;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}
+.btn.big{padding:13px 14px;font-size:15px;font-weight:600}
 .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
 .gal button{display:flex;flex-direction:column;gap:3px;padding:0;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);cursor:pointer;text-align:left;overflow:hidden;font:inherit}
 .gal button:hover{border-color:var(--muted)}
@@ -741,7 +758,8 @@ details.explain dd{margin:0;color:var(--muted)}
     <div class="head">
       <div class="brand"><h1>Meja Ukur Bidang</h1><span class="tag">WGS84 · UTM · TM-3</span></div>
       <div class="tabs" role="tablist">
-        <button role="tab" id="tab-bidang" aria-selected="true" data-tab="bidang">Bidang</button>
+        <button role="tab" id="tab-lapangan" aria-selected="true" data-tab="lapangan">Lapangan</button>
+        <button role="tab" id="tab-bidang" aria-selected="false" data-tab="bidang">Bidang</button>
         <button role="tab" id="tab-periksa" aria-selected="false" data-tab="periksa">Periksa</button>
         <button role="tab" id="tab-foto" aria-selected="false" data-tab="foto">Foto Lapangan</button>
         <button role="tab" id="tab-analisa" aria-selected="false" data-tab="analisa">Analisa</button>
@@ -754,7 +772,39 @@ details.explain dd{margin:0;color:var(--muted)}
       <div class="res bad" id="libwarn" role="alert" hidden></div>
 
       <!-- ===== BIDANG ===== -->
-      <section data-pane="bidang" class="sec" style="gap:16px">
+      <!-- ===== LAPANGAN ===== -->
+      <section data-pane="lapangan" class="sec" style="gap:14px">
+        <div class="gps" id="lp-gps"><span class="dot"></span><span id="lp-gpstxt">GPS belum aktif</span><button class="btn sm" id="lp-gpson">Nyalakan GPS</button></div>
+        <div class="sec">
+          <label class="lbl" for="lp-bid">Bidang yang dikerjakan</label>
+          <select id="lp-bid"></select>
+        </div>
+        <div class="seg" role="radiogroup" aria-label="Jenis foto">
+          <button type="button" role="radio" id="lp-m-patok" aria-checked="true" data-m="patok"><b>Patok / titik batas</b><span>jadi sudut bidang, berurutan</span></button>
+          <button type="button" role="radio" id="lp-m-kondisi" aria-checked="false" data-m="kondisi"><b>Kondisi lapangan</b><span>bangunan, tanaman, pagar, papan</span></button>
+        </div>
+        <label class="cam" for="lp-cam" id="lp-camlbl"><span class="cam-ic" aria-hidden="true"></span><span id="lp-camtxt">Foto patok P1</span></label>
+        <input type="file" id="lp-cam" accept="image/*" capture="environment" hidden>
+        <div class="note" style="text-align:center" id="lp-hint">Berdiri tepat di atas patok, tunggu titik GPS hijau, lalu potret.</div>
+        <div id="lp-status"></div>
+        <div id="lp-shots" class="gal"></div>
+        <div class="row" id="lp-acts" hidden>
+          <button class="btn sm" id="lp-undo">Batalkan foto terakhir</button>
+          <button class="btn sm" id="lp-newb">Mulai bidang baru</button>
+        </div>
+        <button class="btn pri big" id="lp-bhumi">Selesai · Buka di Bhumi</button>
+        <div id="lp-msg"></div>
+        <details class="explain">
+          <summary>Seberapa teliti hasil dari GPS HP?</summary>
+          <dl>
+            <dt>Akurasi</dt><dd>GPS HP biasanya meleset 3–10 m. Alat ini merata-ratakan posisi selama Anda berdiri di patok dan mencatat akurasinya per titik. Luas yang tampil disertai perkiraan rentang kesalahannya.</dd>
+            <dt>Untuk apa cukup</dt><dd>Menemukan dan menandai lokasi bidang, membandingkan dengan persil di Bhumi, dan mendokumentasikan patok serta kondisi lapangan. Tidak untuk menetapkan batas atau luas resmi; itu tetap lewat pengukuran petugas ukur.</dd>
+            <dt>Supaya lebih baik</dt><dd>Nyalakan GPS sebelum tiba di lokasi, aktifkan Lokasi akurasi tinggi, hindari berdiri di bawah pohon rapat atau menempel tembok, dan tunggu sampai akurasi di bawah 5 m.</dd>
+          </dl>
+        </details>
+      </section>
+
+      <section data-pane="bidang" class="sec" style="gap:16px" hidden>
         <div class="sec">
           <div class="lbl">Daftar bidang</div>
           <div class="chips" id="chips"></div>
@@ -1312,7 +1362,7 @@ function drawMap(){
 }
 
 /* ---------- Tab ---------- */
-let tab='bidang';
+let tab='lapangan';
 document.addEventListener('mub-tab',e=>{tab=e.detail;
   if(tab==='analisa')renderOverlaps();if(tab==='berkas')renderExport();if(tab==='periksa')renderPeriksa();if(tab==='foto')renderPhotos();if(drawing&&tab!=='bidang')stopDraw();});
 
@@ -1554,6 +1604,8 @@ function runChecks(b,idx){
   ov.forEach(o=>{const other=o.i===idx?o.j:o.i,pct=o.i===idx?o.pi:o.pj,nm=state.bidang[other].name||('Bidang '+(other+1));
     if(pct<1)add('warn','Bersinggungan dengan '+nm+' ('+nf(o.area,2)+' m²)','Irisan kecil ('+nf(pct,2)+'% luas bidang ini), umumnya akibat perbedaan ketelitian pengukuran atau plotting.','Belum cukup untuk menyimpulkan tumpang tindih. Bila dipersoalkan, pastikan lewat pengembalian batas.',[['analisa','Lihat di tab Analisa']]);
     else add('bad','Tumpang tindih dengan '+nm+' ('+nf(o.area,2)+' m²)','Sekitar '+nf(pct,1)+'% bidang ini berada di atas bidang lain.','Telusuri warkah dan gambar ukur kedua bidang: tahun ukur, metode, dan apakah salah satunya memakai koordinat lokal atau datum lama. Lihat Panduan bagian 3 dan 7.',[['analisa','Lihat di tab Analisa']]);});
+  if(b.src&&b.src.fmt==='lapangan'){const ac=(state.photos||[]).filter(p=>p.bid===b.id&&p.kind==='patok'&&p.acc!=null).map(p=>p.acc),mx=ac.length?Math.max(...ac):null,err=b.pts.length>=3?areaErr(b):null;
+    add('warn','Titik batas diambil dari GPS HP'+(mx!=null?' (akurasi terburuk ±'+nf(mx,1)+' m)':''),'Posisi patok direkam dengan GPS HP saat memotret, bukan dengan alat ukur. Luas dan bentuknya perkiraan'+(err!=null?'; rentang kesalahan luas kira-kira ±'+nf(err,0)+' m²':'')+'.','Pakai untuk menemukan lokasi dan membandingkan dengan persil di Bhumi. Untuk angka resmi, bandingkan dengan surat ukur atau minta pengukuran.');}
   {const c=coverage(b);if(!c.ph.length)add('info','Belum ada foto lapangan untuk bidang ini','Foto di tiap titik batas (patok, pagar, tanda batas) memudahkan mencocokkan data ukur dengan keadaan di lapangan.','Unggah foto di tab Foto Lapangan. Foto yang jatuh di dalam atau dekat bidang ini terhubung otomatis.',[['foto','Ke tab Foto Lapangan']]);
     else add(c.todo.length?'info':'ok',c.ph.length+' foto lapangan terhubung',c.done.size?'Titik batas yang sudah didokumentasikan: '+[...c.done].sort((x,y)=>x-y).map(k=>'P'+(k+1)).join(', ')+'.':'Belum ada foto yang terhubung ke titik batas tertentu.',c.todo.length?'Titik batas yang belum berfoto: '+c.todo.map(k=>'P'+(k+1)).join(', ')+'.':'');}
   add('info','Arah urutan titik: '+(m.signed<0?'searah jarum jam':'berlawanan arah jarum jam'),'Arah urutan tidak memengaruhi luas maupun bentuk. Dicatat sebagai informasi saja.','');
@@ -1587,7 +1639,7 @@ $('pk-tol').addEventListener('change',e=>{state.tolK=e.target.value;renderPeriks
 $('btn-copysum').addEventListener('click',e=>copy($('pk-sum').value,e.target));
 function summary(b,checks,lc){
   const nm=b.name||('Bidang '+(state.active+1));if(b.pts.length<3)return 'Data koordinat '+nm+' belum lengkap.';
-  const m=measure(b.pts),FMT={dec:'koordinat geografis desimal',dms:'koordinat geografis (derajat-menit-detik)',utm:'koordinat UTM',tm3:'koordinat TM-3',trav:'data jarak dan azimut gambar ukur'};
+  const m=measure(b.pts),FMT={dec:'koordinat geografis desimal',dms:'koordinat geografis (derajat-menit-detik)',utm:'koordinat UTM',tm3:'koordinat TM-3',trav:'data jarak dan azimut gambar ukur',lapangan:'posisi GPS HP saat memotret patok di lapangan'};
   const L=[];let no=1;
   L.push('ANALISA DATA UKUR – '+nm.toUpperCase());
   L.push((no++)+'. Data yang diolah: '+b.pts.length+' titik batas'+(b.src?' yang berasal dari '+FMT[b.src.fmt]+(b.src.zone&&b.src.fmt!=='dec'&&b.src.fmt!=='dms'?' zona '+b.src.zone:''):'')+'.');
@@ -1665,6 +1717,7 @@ function renderExport(){const f=$('ex-fmt').value;$('ex-out').value=(f==='kml'||
 async function buildKmz(){
   if(typeof JSZip==='undefined')throw new Error('nozip');
   const zip=new JSZip(),imgs={},n={ok:0};zip.file('doc.kml','');
+  for(const p of state.photos.filter(p=>hasXY(p)&&!phFiles[p.id]&&p.thumb)){try{const b64=p.thumb.split(',')[1],bin=atob(b64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);const path='files/'+p.id+'.jpg';zip.file(path,u,{createFolders:false});imgs[p.id]=path;n.ok++;}catch(e){}}
   const withFile=state.photos.filter(p=>hasXY(p)&&phFiles[p.id]);
   for(const p of withFile){try{const bmp=await createImageBitmap(phFiles[p.id]);const b=await renderJpeg(bmp,0,0,bmp.width,bmp.height,1280);const path='files/'+p.id+'.jpg';zip.file(path,b,{createFolders:false});imgs[p.id]=path;n.ok++;}catch(e){}}
   zip.file('doc.kml',kml(imgs));
@@ -1825,8 +1878,121 @@ $('btn-ge').addEventListener('click',async e=>{
   finally{btn.disabled=false;}
 });
 
+/* ---------- Mode Lapangan: foto → GPS → bidang → Bhumi ---------- */
+const inClaudeView=!!(window.claude&&typeof window.claude.use==='function');
+if(!state.lp)state.lp={bid:null,mode:'patok'};
+let gpsWatch=null,gpsFix=[],gpsErr=null;
+/* Rata-rata hanya bacaan di titik tempat berdiri: mundur dari bacaan terbaru, berhenti begitu posisi berpindah */
+function fixDist(a,b){const k=111320;return Math.hypot((a.lat-b.lat)*k,(a.lng-b.lng)*k*Math.cos(a.lat*D2R));}
+function bestFix(){const now=Date.now();if(!gpsFix.length)return null;const last=gpsFix[gpsFix.length-1];if(now-last.t>25000)return null;
+  const g=[];for(let i=gpsFix.length-1;i>=0;i--){const f=gpsFix[i];if(now-f.t>25000)break;if(fixDist(f,last)>Math.max(2*last.acc,4))break;g.push(f);}
+  const m=Math.min(...g.map(f=>f.acc)),use=g.filter(f=>f.acc<=Math.max(m*1.5,m+1));
+  let w=0,la=0,ln=0;use.forEach(f=>{const k=1/Math.max(f.acc,.5)**2;w+=k;la+=f.lat*k;ln+=f.lng*k;});return {lat:la/w,lng:ln/w,acc:m,n:use.length,t:last.t};}
+/* Perkiraan simpangan luas akibat galat posisi tiap titik: sqrt(Σ σi²·|P(i+1)−P(i−1)|²/4) */
+function areaErr(b){const m=measure(b.pts),g=m.grid,n=g.length;let v=0,ok=0;
+  for(let i=0;i<n;i++){const ph=(state.photos||[]).find(p=>p.bid===b.id&&p.kind==='patok'&&p.titik===i&&p.acc!=null);const sg=ph?ph.acc:null;if(sg==null)continue;ok++;
+    const a=g[(i-1+n)%n],c=g[(i+1)%n];v+=sg*sg*((c.E-a.E)**2+(c.N-a.N)**2)/4;}
+  return ok?Math.sqrt(v):null;}
+function gpsUi(){const el=$('lp-gps'),tx=$('lp-gpstxt'),bt=$('lp-gpson');el.className='gps';
+  if(gpsErr){el.classList.add('bad');tx.textContent=gpsErr;bt.hidden=false;bt.textContent='Coba lagi';return;}
+  if(gpsWatch==null){tx.textContent=inClaudeView?'GPS langsung tidak tersedia di tampilan Claude. Buka versi web di HP untuk memakai GPS.':'GPS belum aktif';bt.hidden=inClaudeView;bt.textContent='Nyalakan GPS';return;}
+  bt.hidden=true;const f=bestFix();if(!f){tx.textContent='Mencari sinyal GPS…';el.classList.add('warn');return;}
+  el.classList.add(f.acc<=5?'ok':f.acc<=15?'warn':'bad');tx.textContent='GPS akurasi ±'+nf(f.acc,1)+' m'+(f.n>1?' · rata-rata '+f.n+' bacaan':'')+(f.acc>15?' · tunggu sebentar atau pindah ke tempat terbuka':'');}
+function gpsStart(){
+  if(gpsWatch!=null)return;gpsErr=null;
+  if(!('geolocation' in navigator)){gpsErr='Peramban ini tidak menyediakan GPS.';gpsUi();return;}
+  if(!window.isSecureContext||inClaudeView){gpsErr=inClaudeView?'GPS langsung tidak tersedia di tampilan Claude. Buka versi web di HP.':'Buka alat lewat alamat https (versi web) supaya GPS bisa dipakai.';gpsUi();return;}
+  gpsWatch=navigator.geolocation.watchPosition(p=>{gpsFix.push({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()});if(gpsFix.length>60)gpsFix.shift();gpsErr=null;gpsUi();},
+    e=>{gpsErr=e.code===1?'Izin lokasi ditolak. Izinkan Lokasi untuk situs ini di pengaturan peramban, lalu tekan Coba lagi.':e.code===2?'Lokasi HP mati atau tidak tersedia. Nyalakan Lokasi/GPS.':'Sinyal GPS lemah. Pindah ke tempat terbuka.';if(e.code===1&&gpsWatch!=null){navigator.geolocation.clearWatch(gpsWatch);gpsWatch=null;}gpsUi();},
+    {enableHighAccuracy:true,maximumAge:0,timeout:30000});
+  gpsUi();setInterval(gpsUi,3000);
+}
+$('lp-gpson').addEventListener('click',()=>{gpsWatch=null;gpsStart();});
+function lpBid(){const i=bidIdx(state.lp.bid);return i>=0?state.bidang[i]:null;}
+function lpRender(){
+  ensureIds();const b=lpBid();
+  $('lp-bid').innerHTML='<option value="">+ Bidang baru dari foto patok</option>'+state.bidang.map((x,i)=>`<option value="${x.id}"${x.id===state.lp.bid?' selected':''}>${esc(bidName(i))} (${x.pts.length} titik)</option>`).join('');
+  ['patok','kondisi'].forEach(m=>$('lp-m-'+m).setAttribute('aria-checked',state.lp.mode===m?'true':'false'));
+  $('lp-hint').textContent=state.lp.mode==='patok'?'Berdiri tepat di atas patok, tunggu titik GPS hijau, lalu potret.':'Foto kondisi dicatat di lokasi Anda berdiri dan dihubungkan ke bidang yang dipilih.';
+  $('lp-camtxt').textContent=state.lp.mode==='patok'?'Foto patok P'+((b?b.pts.length:0)+1):'Foto kondisi';
+  const mine=(state.photos||[]).filter(p=>p.lp&&(b?p.bid===b.id:false));
+  $('lp-acts').hidden=!mine.length&&!(b&&b.pts.length);
+  let st='';
+  if(b&&b.pts.length>=3){const m=measure(b.pts),err=areaErr(b);
+    st=`<div class="stats"><div class="stat"><div class="k">Luas sementara</div><div class="v">${fmtArea(m.area)}</div><div class="s">${err!=null?'kira-kira ± '+nf(err,0)+' m² (akurasi GPS)':'&nbsp;'}</div></div><div class="stat"><div class="k">Patok</div><div class="v">${b.pts.length}</div><div class="s">keliling ${nf(m.per,1)} m</div></div></div>`;}
+  else if(b&&b.pts.length)st=`<div class="res">${b.pts.length} patok tersimpan. Bidang terbentuk setelah minimal 3 patok.</div>`;
+  $('lp-status').innerHTML=st;
+  $('lp-shots').innerHTML=mine.slice(-12).reverse().map(p=>`<button data-pid="${p.id}">${phThumbs[p.id]?`<img class="gi" src="${phThumbs[p.id]}" alt="">`:`<div class="gi">${esc(p.name)}</div>`}<div class="gc">${p.kind==='patok'&&p.titik!=null?`<b>P${p.titik+1}</b> · `:'Kondisi · '}±${p.acc!=null?nf(p.acc,1):'?'} m</div></button>`).join('');
+}
+$('lp-shots').addEventListener('click',e=>{const t=e.target.closest('[data-pid]');if(!t)return;const p=state.photos.find(x=>x.id===t.dataset.pid);if(p&&hasXY(p))openPhoto(p);});
+$('lp-bid').addEventListener('change',e=>{state.lp.bid=e.target.value||null;const i=bidIdx(state.lp.bid);if(i>=0){state.active=i;refresh();zoomTo();}save();lpRender();});
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{state.lp.mode=b.dataset.m;save();lpRender();}));
+$('lp-camlbl').addEventListener('click',()=>{gpsStart();});
+$('lp-newb').addEventListener('click',()=>{state.lp.bid=null;state.lp.mode='patok';save();lpRender();lpMsg('Foto patok berikutnya akan menjadi P1 bidang baru.','ok');});
+function lpMsg(h,cls){$('lp-msg').innerHTML=h?`<div class="res ${cls||''}">${h}</div>`:'';}
+async function makeThumb(file){try{const bmp=await createImageBitmap(file);const b=await renderJpeg(bmp,0,0,bmp.width,bmp.height,200);return await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.onerror=()=>r(null);fr.readAsDataURL(b);});}catch(e){return null;}}
+$('lp-cam').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;lpMsg('Memproses foto…');
+  let pos=null,src='lapangan';const fix=bestFix();
+  if(fix&&Date.now()-fix.t<60000)pos={lat:fix.lat,lng:fix.lng,acc:fix.acc};
+  let ex=null;if(typeof exifr!=='undefined'){try{ex=await exifr.parse(f,{tiff:true,exif:true,gps:true,xmp:false,icc:false,iptc:false});}catch(err){}}
+  if(!pos&&ex&&isFinite(ex.latitude)&&isFinite(ex.longitude)&&!(ex.latitude===0&&ex.longitude===0)){pos={lat:ex.latitude,lng:ex.longitude,acc:isFinite(ex.GPSHPositioningError)?+ex.GPSHPositioningError:null};src='exif';}
+  const kind=state.lp.mode,p={id:pid(),name:(kind==='patok'?'Patok':'Kondisi')+' '+new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}),time:new Date().toISOString(),timeSrc:'exif',cam:ex?[ex.Make,ex.Model].filter(Boolean).join(' '):'',sel:false,lp:true,kind};
+  if(ex&&isFinite(ex.GPSImgDirection))p.dir=+ex.GPSImgDirection;
+  phFiles[p.id]=f;const th=await makeThumb(f);if(th){p.thumb=th;phThumbs[p.id]=th;}
+  if(!pos){
+    state.photos.push(p);save();
+    if(sampleNs&&sampleImg){lpMsg('Foto ini tidak punya posisi GPS. Mencoba membaca teks koordinat yang tercetak di foto…');const r=await stampRead(p);if(r.ok){pos={lat:p.lat,lng:p.lng,acc:p.acc!=null?p.acc:null};src='teks';}}
+    if(!pos){lpMsg('Foto tersimpan, tetapi posisinya tidak diketahui sehingga tidak bisa dijadikan patok. '+(inClaudeView?'Di tampilan Claude GPS tidak tersedia; pakai versi web di HP.':'Nyalakan GPS (tombol di atas), tunggu titik hijau, lalu potret ulang.'),'warn');phRefresh();lpRender();return;}
+  }else state.photos.push(p);
+  p.lat=pos.lat;p.lng=pos.lng;if(pos.acc!=null)p.acc=+(+pos.acc).toFixed(1);p.src=src;
+  if(kind==='patok'){
+    let b=lpBid();
+    if(!b){b={name:'Lapangan '+new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})+' '+new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}),pts:[]};
+      const empty=state.bidang.length===1&&!state.bidang[0].pts.length&&!(state.photos||[]).some(x=>x.bid===state.bidang[0].id);
+      if(empty)state.bidang[0]=Object.assign(state.bidang[0],{name:b.name});else state.bidang.push(b);
+      b=empty?state.bidang[0]:b;ensureIds();state.lp.bid=b.id;}
+    b.pts.push({lat:p.lat,lng:p.lng});b.trav=null;b.decDigits=null;b.src={fmt:'lapangan'};
+    p.bid=b.id;p.titik=b.pts.length-1;p.link='manual';p.name='P'+b.pts.length+' · '+p.name;
+    state.active=bidIdx(b.id);
+    lpMsg(`P${b.pts.length} tersimpan${p.acc!=null?' (±'+nf(p.acc,1)+' m)':''}. ${b.pts.length<3?'Lanjut ke patok berikutnya.':'Bidang sudah terbentuk; lanjut ke patok berikutnya atau tekan Selesai.'}`,p.acc!=null&&p.acc>15?'warn':'ok');
+  }else{const b=lpBid();if(b){p.bid=b.id;p.titik=null;p.link='manual';}lpMsg('Foto kondisi tersimpan'+(b?' untuk '+esc(b.name):'')+'.','ok');}
+  refresh();phRefresh();lpRender();try{map.setView([p.lat,p.lng],Math.max(map.getZoom(),19));}catch(err){}
+});
+$('lp-undo').addEventListener('click',()=>{
+  const b=lpBid(),mine=(state.photos||[]).filter(p=>p.lp&&b&&p.bid===b.id);const last=mine[mine.length-1];if(!last)return;
+  if(last.kind==='patok'&&b&&last.titik===b.pts.length-1)b.pts.pop();
+  delete phFiles[last.id];delete phThumbs[last.id];state.photos=state.photos.filter(x=>x!==last);
+  lpMsg('Foto terakhir dibatalkan.','ok');refresh();phRefresh();lpRender();});
+$('lp-bhumi').addEventListener('click',async e=>{
+  const btn=e.currentTarget,b=lpBid()||cur();
+  if(!b||b.pts.length<3){if(!(state.photos||[]).some(hasXY)){lpMsg('Belum ada patok atau foto berkoordinat. Potret minimal 3 patok untuk membentuk bidang.','warn');return;}}
+  const m=b&&b.pts.length>=3?measure(b.pts):null,c=m?m.center:(()=>{const ph=state.photos.filter(hasXY);return {lat:ph.reduce((a,p)=>a+p.lat,0)/ph.length,lng:ph.reduce((a,p)=>a+p.lng,0)/ph.length};})();
+  copy(fx(c.lat,7)+', '+fx(c.lng,7));
+  if(inClaudeView&&!dlNs){lpMsg('Unduhan belum tersedia di tampilan ini. Muat ulang halaman atau pakai versi web.','warn');return;}
+  btn.disabled=true;
+  try{
+    const f=bhumiFiles(),all={type:'FeatureCollection',name:(b&&b.name)||'Lapangan',features:[]};
+    f.bid.features.forEach(x=>{x.properties.jenis='bidang';all.features.push(x);});
+    f.pts.features.forEach(x=>{x.properties.jenis='titik batas';all.features.push(x);});
+    f.fot.features.forEach(x=>{x.properties.jenis='foto';all.features.push(x);});
+    const day=new Date().toISOString().slice(0,10),fname='lapangan-'+day+'.geojson',txt=JSON.stringify(all);
+    if(dlNs){const z=new JSZip();z.file(fname,txt);await dlNs.save({filename:'lapangan-'+day+'.zip',data:await z.generateAsync({type:'blob',compression:'DEFLATE'})});}
+    else localSave(new Blob([txt],{type:'application/geo+json'}),fname);
+    lpMsg(`<b>${dlNs?'lapangan-'+day+'.zip (ekstrak dulu)':fname}</b> sudah diunduh, dan koordinat lokasinya sudah disalin.
+      <ol style="margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px">
+      <li><a href="https://bhumi.atrbpn.go.id/" target="_blank" rel="noopener"><b>Buka Bhumi ↗</b></a> → Kunjungi Bhumi → Saya Setuju.</li>
+      <li>Menu → Katalog Data → Tambahkan Data Saya → tipe File → pilih <b>${fname}</b> dari folder Unduhan → Tambah Ke Katalog.</li>
+      <li>Centang dataset → Data Dipilih → Terapkan Pada Peta → <b>Sorot</b>. Atau tempel koordinat di kolom <b>Cari Lokasi</b>.</li>
+      <li>Tambahkan layer <b>Bidang Tanah</b> dan atur <b>Transparansi</b> bidang Anda supaya persil di bawahnya terlihat.</li></ol>`,'ok');
+  }catch(err){if(err&&err.code==='declined')lpMsg('');else lpMsg('Gagal menyiapkan berkas'+(err&&err.code?' ('+err.code+')':'')+'.','warn');}
+  finally{btn.disabled=false;}
+});
+document.addEventListener('mub-tab',e=>{if(e.detail==='lapangan'){lpRender();gpsUi();}});
+
 /* ---------- Foto lapangan ---------- */
 const phFiles={},phThumbs={};
+(state.photos||[]).forEach(p=>{if(p.thumb)phThumbs[p.id]=p.thumb;});
 if(!Array.isArray(state.photos))state.photos=[];
 const gPhoto=L.layerGroup().addTo(map);
 function pid(){return 'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
@@ -1839,7 +2005,7 @@ function relTo(p,i){const b=state.bidang[i];if(!b||b.pts.length<3)return null;co
 function photoRel(p){const all=state.bidang.map((b,i)=>({i,r:relTo(p,i)})).filter(x=>x.r);if(!all.length)return null;
   const ins=all.filter(x=>x.r.inside);if(ins.length)return {inside:true,i:ins[0].i,d:ins[0].r.d};
   all.sort((a,b)=>a.r.d-b.r.d);return {inside:false,i:all[0].i,d:all[0].r.d};}
-const SRC={exif:'dari data foto',teks:'dibaca otomatis dari teks di foto — cocokkan dengan fotonya',impor:'diimpor',manual:'diisi manual',gps:'GPS peramban',avg:'rata-rata foto'};
+const SRC={lapangan:'GPS HP saat memotret',exif:'dari data foto',teks:'dibaca otomatis dari teks di foto — cocokkan dengan fotonya',impor:'diimpor',manual:'diisi manual',gps:'GPS peramban',avg:'rata-rata foto'};
 let sampleNs=null,sampleImg=false;
 if(window.claude&&typeof window.claude.use==='function'){window.claude.use('sample').then(async ns=>{if(!ns)return;sampleNs=ns;const lim=await ns.limits().catch(()=>null);sampleImg=!!(lim&&lim.images);sampleMax=lim&&lim.images?lim.images.maxCount:0;autoNote();if(tab==='foto')renderPhotos();}).catch(()=>{});}
 let sampleMax=0;
@@ -2007,7 +2173,7 @@ function refresh(){ensureIds();renderChips();syncInputs();renderResult();renderB
 /* ---------- Mulai ---------- */
 setBase(state.base||'sat');$('btn-labels').classList.toggle('on',state.labels);
 fillZone($('cv-zone'),'dec');
-refresh();autoNote();
+refresh();autoNote();lpRender();gpsUi();
 setTimeout(()=>{map.invalidateSize();if(cur().pts.length)zoomTo();else{const ph=(state.photos||[]).filter(hasXY);if(ph.length)map.fitBounds(L.latLngBounds(ph.map(p=>[p.lat,p.lng])).pad(.3),{maxZoom:19});}},60);
 window.addEventListener('resize',()=>map.invalidateSize());
 function tbLinks(){try{const c=map.getCenter(),z=map.getZoom(),ll=fx(c.lat,7)+','+fx(c.lng,7);$('tb-ge').href=`https://earth.google.com/web/@${ll},0a,${Math.round(40000000/Math.pow(2,z))}d,35y,0h,0t,0r`;$('tb-gm').href=`https://www.google.com/maps/@?api=1&map_action=map&center=${ll}&zoom=${Math.max(5,Math.min(20,z))}&basemap=satellite`;}catch(e){}}
