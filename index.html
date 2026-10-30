@@ -823,10 +823,11 @@ details.explain dd{margin:0;color:var(--muted)}
           </div>
           <div class="tw"><table id="b-table"></table></div>
           <div class="lbl" style="margin-top:6px">Buka di aplikasi lain</div>
-          <div class="row"><button class="btn pri sm" id="btn-ge">Lihat bidang + foto di Google Earth</button></div>
+          <div class="row"><button class="btn pri sm" id="btn-ge">Lihat bidang + foto di Google Earth</button><button class="btn pri sm" id="btn-bhumi">Tampilkan bidang + foto di Bhumi</button></div>
           <div id="ge-msg"></div>
+          <div id="bh-msg"></div>
           <div class="links" id="b-links"></div>
-          <div class="note">Tautan Google Earth, Google Maps, dan Bhumi hanya bisa membawa lokasi, tidak bisa membawa garis bidang atau foto. Untuk melihat bidang beserta fotonya, pakai tombol di atas. Bhumi tidak menerima koordinat lewat tautan; salin koordinatnya lalu tempel di kolom pencarian Bhumi: <button class="btn sm" id="btn-copyc">Salin koordinat</button></div>
+          <div class="note">Tautan Google Earth, Google Maps, dan Bhumi hanya bisa membawa lokasi, tidak bisa membawa garis bidang atau foto. Untuk melihat bidang beserta fotonya, pakai dua tombol di atas. Bhumi tidak menerima koordinat lewat tautan; salin koordinatnya lalu tempel di kolom pencarian Bhumi: <button class="btn sm" id="btn-copyc">Salin koordinat</button></div>
         </div>
         <div class="sec">
           <div class="lbl">Foto lapangan bidang ini</div>
@@ -1429,7 +1430,7 @@ function renderLinks(){
     <a href="https://www.google.com/maps/@?api=1&map_action=map&center=${fx(c.lat,7)},${fx(c.lng,7)}&zoom=${t.zoom}&basemap=satellite" target="_blank" rel="noopener">Google Maps satelit ↗</a>
     <a href="https://bhumi.atrbpn.go.id/" target="_blank" rel="noopener">Bhumi ATR/BPN ↗</a>
     <span class="note" style="flex-basis:100%">Tautan menuju ${t.label}: ${fx(c.lat,6)}, ${fx(c.lng,6)}</span>`;
-  const any=state.bidang.some(x=>x.pts.length>=3)||(state.photos||[]).some(hasXY);$('btn-ge').disabled=!any;
+  const any=state.bidang.some(x=>x.pts.length>=3)||(state.photos||[]).some(hasXY);$('btn-ge').disabled=!any;$('btn-bhumi').disabled=!any;
   $('btn-ge').title=any?'':'Masukkan bidang (minimal 3 titik) atau unggah foto berkoordinat dulu';
 }
 function tableRows(m,fmt){
@@ -1769,6 +1770,44 @@ $('b-photos').addEventListener('click',e=>{const go=e.target.closest('[data-go]'
 function photoLinks(p){const ll=fx(p.lat,7)+','+fx(p.lng,7),h=p.dir!=null?Math.round(p.dir):0;
   return `<a href="https://earth.google.com/web/@${ll},0a,70d,35y,${h}h,${p.dir!=null?65:0}t,0r" target="_blank" rel="noopener">Google Earth${p.dir!=null?' (arah foto)':''} ↗</a><a href="https://www.google.com/maps/search/?api=1&query=${ll}" target="_blank" rel="noopener">Google Maps ↗</a><a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${ll}${p.dir!=null?'&heading='+h:''}" target="_blank" rel="noopener">Street View ↗</a><button class="btn sm" data-copy="${fx(p.lat,7)}, ${fx(p.lng,7)}">Salin untuk Bhumi</button>`;}
 document.addEventListener('click',e=>{const c=e.target.closest('[data-copy]');if(c)copy(c.dataset.copy,c);});
+/* ---------- Bhumi ATR/BPN: berkas untuk Katalog Data → Tambahkan Data Saya ---------- */
+function bhumiFiles(){
+  autoLink();
+  const bid={type:'FeatureCollection',features:state.bidang.filter(b=>b.pts.length>=3).map(b=>{const m=measure(b.pts),f=toTurf(b.pts),nf_=photosOf(b).length,lc=luasCheck(b);
+    f.properties={nama:b.name||'Bidang',luas_tm3_m2:+m.area.toFixed(2),luas_tertulis_m2:lc?lc.L:null,selisih_m2:lc?+lc.d.toFixed(2):null,keliling_m:+m.per.toFixed(2),jumlah_titik:b.pts.length,zona_tm3:m.zone.code,jumlah_foto:nf_,sumber:'Meja Ukur Bidang'};return f;})};
+  const fot={type:'FeatureCollection',features:state.photos.filter(hasXY).map(p=>{const bi=bidIdx(p.bid);return turf.point([+p.lng.toFixed(8),+p.lat.toFixed(8)],{nama:p.name,waktu:fmtTime(p.time),bidang:bi>=0?bidName(bi):null,titik_batas:p.titik!=null&&bi>=0?'P'+(p.titik+1):null,akurasi_m:p.acc!=null?+(+p.acc).toFixed(1):null,sumber_koordinat:SRC[p.src]||'',teks_tercetak:p.raw||null,alamat:p.addr||null});})};
+  const pts={type:'FeatureCollection',features:[]};state.bidang.forEach(b=>{if(b.pts.length<3)return;const m=measure(b.pts);b.pts.forEach((p,k)=>pts.features.push(turf.point([+p.lng.toFixed(8),+p.lat.toFixed(8)],{bidang:b.name||'Bidang',titik:'P'+(k+1),x_tm3:+m.grid[k].E.toFixed(3),y_tm3:+m.grid[k].N.toFixed(3),zona_tm3:m.zone.code})));});
+  return {bid,fot,pts};
+}
+function bhMsg(h,cls){$('bh-msg').innerHTML=h?`<div class="res ${cls||''}">${h}</div>`:'';}
+const BH_STEPS=n=>`<ol style="margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px">
+  <li>Buka <a href="https://bhumi.atrbpn.go.id/" target="_blank" rel="noopener">Bhumi ATR/BPN ↗</a>, klik <b>Kunjungi Bhumi</b> lalu <b>Saya Setuju</b>.</li>
+  <li>Klik <b>Menu</b> (kiri atas peta) → <b>Katalog Data</b> → <b>Tambahkan Data Saya</b>.</li>
+  <li>Isi <b>Nama Dataset</b> (mis. nama bidang atau nomor berkas), pilih tipe <b>File</b>, lalu seret <b>${n[0]}</b> ke kotak <b>Drop File Disini</b> → <b>Tambah Ke Katalog</b>.</li>
+  ${n[1]?`<li>Ulangi untuk <b>${n[1]}</b>${n[2]?` dan <b>${n[2]}</b>`:''} sebagai dataset terpisah.</li>`:''}
+  <li>Centang dataset tadi → <b>Data Dipilih</b> → <b>Terapkan Pada Peta</b>. Klik bidangnya di peta lalu ikon <b>Sorot Layer</b> untuk langsung menuju lokasi.</li>
+  <li>Untuk overlay, kembali ke <b>Katalog Data</b> dan tambahkan layer Bhumi lain (persil, HGU, tata ruang). Atur transparansi layer Anda supaya persil di bawahnya terlihat.</li></ol>`;
+$('btn-bhumi').addEventListener('click',async e=>{
+  const btn=e.currentTarget;const f=bhumiFiles();
+  if(!f.bid.features.length&&!f.fot.features.length){bhMsg('Belum ada bidang (minimal 3 titik) atau foto berkoordinat untuk dikirim ke Bhumi.','warn');return;}
+  const inClaude=!!(window.claude&&typeof window.claude.use==='function');
+  if(inClaude&&!dlNs){bhMsg('Unduhan belum tersedia di tampilan ini. Muat ulang halaman, atau pakai versi web.','warn');return;}
+  const files=[];if(f.bid.features.length)files.push(['bidang-bhumi.geojson',f.bid]);if(f.fot.features.length)files.push(['foto-bhumi.geojson',f.fot]);if(f.pts.features.length)files.push(['titik-batas-bhumi.geojson',f.pts]);
+  btn.disabled=true;
+  try{
+    let where;
+    if(dlNs||typeof JSZip!=='undefined'&&files.length>1){
+      if(typeof JSZip==='undefined')throw new Error('nozip');
+      const z=new JSZip();files.forEach(([n,d])=>z.file(n,JSON.stringify(d)));const zb=await z.generateAsync({type:'blob',compression:'DEFLATE'});
+      if(dlNs)await dlNs.save({filename:'untuk-bhumi.zip',data:zb});else localSave(zb,'untuk-bhumi.zip');
+      where='<b>untuk-bhumi.zip</b> tersimpan. Ekstrak dulu (klik kanan → Extract All; di HP: aplikasi File → Ekstrak). Isinya: '+files.map(x=>'<b>'+x[0]+'</b>').join(', ')+'.';
+    }else{localSave(new Blob([JSON.stringify(files[0][1])],{type:'application/geo+json'}),files[0][0]);where='<b>'+files[0][0]+'</b> sudah diunduh.';}
+    bhMsg(`${where} Berisi ${f.bid.features.length} bidang, ${f.fot.features.length} titik foto, dan ${f.pts.features.length} titik batas.${BH_STEPS(files.map(x=>x[0]))}
+      <div class="note" style="margin-top:8px">Bhumi hanya menampilkan titik dan atribut foto (nama, waktu, bidang, titik batas, akurasi), bukan gambarnya. Gambar foto bisa dilihat lewat tombol Google Earth. Data yang diunggah ke "Data Saya" tersimpan di akun Bhumi Anda, jadi jangan unggah data yang belum boleh dibagikan.</div>`,'ok');
+  }catch(err){if(err&&err.code==='declined')bhMsg('');else if(err&&err.message==='nozip')bhMsg('Komponen pembuat ZIP belum termuat. Periksa internet lalu muat ulang.','warn');else bhMsg('Gagal menyiapkan berkas'+(err&&err.code?' ('+err.code+')':'')+'.','warn');}
+  finally{btn.disabled=false;}
+});
+
 function geMsg(h,cls){$('ge-msg').innerHTML=h?`<div class="res ${cls||''}">${h}</div>`:'';}
 $('btn-ge').addEventListener('click',async e=>{
   const btn=e.currentTarget;if(!state.bidang.some(x=>x.pts.length>=3)&&!(state.photos||[]).some(hasXY))return;
